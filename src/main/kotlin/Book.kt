@@ -16,34 +16,34 @@ class Book(name: String) {
     }
 
     companion object {
+        // BookHash 用于存放经过处理后的书籍信息，包含book类
+        var BookHash = HashMap<String, Book>()
+        // NameHash 用于存放书籍原始文件的名称
+        var NameHash = HashMap<String, String>()
+
+        // 根据书籍文件名过滤出真实的书名
         fun findName(originName:String):String {
 
             var reName = originName.replace("""[^(a-zA-Z0-9\\u4e00-\\u9fa5)]""", "")
 
             reName = reName.replace(Regex("""\[\d?\.?\d?]"""), "")
 
-            reName = reName.split(".")[0].split(" ")[0].split("_")[0]
+            reName = reName.split(".")[0].split("_")[0]
 
             reName = reName.split("（")[0].split("【")[0].split("(")[0]
 
             return reName
         }
 
-        var BookHash = HashMap<String, Book>()
-        var NameHash = HashMap<String, String>()
-
+        // 由豆瓣分类关键字转化为自定义的书籍分类
         fun getCategory(cCategory:String):String {
-            val availableCategory = listOf<String>("科普", "计算机", "心理", "传记", "成长", "文学", "管理", "育儿", "女性", "历史", "经济", "社会", "小说", "漫画", "互联网", "学习", "职场", "艺术", "工具", "哲学", "政治", "生活")
-
-            for (it:String in availableCategory) {
+            for (it:String in Config.availableCategory) {
                 if (cCategory.contains(it)) {
                     return it
                 }
             }
-
             return "未分类"
         }
-
     }
 
     fun save() {
@@ -107,7 +107,6 @@ class Book(name: String) {
     }
 
     override fun toString():String {
-
         return "name:$douban_name, category:$douban_category, score:$douban_score"
     }
 

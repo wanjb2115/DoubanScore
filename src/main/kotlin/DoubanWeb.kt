@@ -7,13 +7,15 @@ import kotlin.math.max
 import kotlin.math.min
 
 class DoubanWeb {
-
+    // 豆瓣读书搜索的网址
     val url = "https://search.douban.com/book/subject_search?search_text="
 
     companion object {
+        // 触发ip异常后，判断是否是登录状态
         var loginFlag = false
     }
 
+    // 莱文斯坦距离算法
     fun getLevenshteinDistance(X: String, Y: String): Int {
         val m = X.length
         val n = Y.length
@@ -34,7 +36,7 @@ class DoubanWeb {
         }
         return T[m][n]
     }
-
+    // 字符串相似度比较算法
     fun findSimilarity(x: String?, y: String?): Double {
         require(!(x == null || y == null)) { "Strings should not be null" }
 
@@ -44,6 +46,8 @@ class DoubanWeb {
         } else 1.0
     }
 
+    // 进入豆瓣网址查找与图书相关的信息，对相关hash进行图书填充
+    // 输入：书籍文件的信息，Chrome Driver实例
     fun fillBook(bookFileInfo:BookFileInfo, driver:ChromeDriver) {
 
         if (Book.NameHash[bookFileInfo.name] != null && Book.BookHash[Book.NameHash[bookFileInfo.name]]!=null)
@@ -72,12 +76,14 @@ class DoubanWeb {
 
             if (regex_url.containsMatchIn(douban_url)) {
 
-                if (findSimilarity(it.text, bookFileInfo.name) < 0.01) {
+                val book:Book = if (Book.BookHash[it.text] == null) Book(bookFileInfo.name) else Book.BookHash[it.text]!!
+
+                // 书籍相似度少于10%，识别为未找到
+                if (findSimilarity(it.text, bookFileInfo.name) < 0.1) {
                     println(it.text + "," + bookFileInfo.name)
+                    Book.BookHash[it.text] = book
                     break
                 }
-
-                val book:Book = if (Book.BookHash[it.text] == null) Book(bookFileInfo.name)  else Book.BookHash[it.text]!!
 
                 book.douban_url = douban_url
                 book.douban_name = it.text
@@ -89,6 +95,7 @@ class DoubanWeb {
                 driver.get(book.douban_url)
                 driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(5))
 
+                // 寻找网页中的豆瓣评分
                 try {
                     book.douban_score = driver.findElement(By.className("rating_num")).text
 
@@ -102,6 +109,7 @@ class DoubanWeb {
                     println("error:${e.message}")
                 }
 
+                // 根据下载下来的全部网页找书籍的分类
                 val bookHtml = driver.executeScript("return document.documentElement.outerHTML")
                 val bookRegexRes = Regex("""criteria = '.+'""").find(bookHtml.toString())?.value
 
