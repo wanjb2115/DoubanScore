@@ -46,6 +46,25 @@ class DoubanWeb {
         } else 1.0
     }
 
+    fun splitKeywords(keyWords:String, book: Book){
+        val keyWordsSplitList = keyWords.split(",")
+        for (index in keyWordsSplitList.indices) {
+            if (index == 0) continue
+            val keyWord = keyWordsSplitList[index]
+
+            if (keyWord in listOf("简介", "作者", "书评", "论坛", "推荐","二手")) continue
+
+            if (keyWord.contains("出版社")) {
+                book.douban_publisher = keyWord
+            } else if (keyWord.contains(Regex("""\d{4}"""))) {
+                book.douban_date = keyWord
+                break
+            } else {
+                book.douban_author += "$keyWord "
+            }
+        }
+    }
+
     // 进入豆瓣网址查找与图书相关的信息，对相关hash进行图书填充
     // 输入：书籍文件的信息，Chrome Driver实例
     fun fillBook(bookFileInfo:BookFileInfo, driver:ChromeDriver) {
@@ -56,19 +75,21 @@ class DoubanWeb {
             return
         }
 
-        driver.get("$url${bookFileInfo.name}")
+        driver.get("$url${bookFileInfo.name.replace("+", "%2B")}")
         driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(5))
 
         var bookInfoList = driver.findElements(By.className("title-text"))
+        var tryTimes = 0
 
-        if (!loginFlag && bookInfoList.size == 0) {
-            loginFlag = true
-            Thread.sleep(30000)
-
-            driver.get("$url${bookFileInfo.name}")
-            driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(5))
+        while (!loginFlag && bookInfoList.size == 0 && tryTimes < 10) {
             bookInfoList = driver.findElements(By.className("title-text"))
+
+            tryTimes ++
+
+            println(tryTimes)
         }
+
+        loginFlag = true
 
         for (it in bookInfoList) {
             val douban_url = it.getDomAttribute("href")
@@ -78,8 +99,8 @@ class DoubanWeb {
 
                 val book:Book = if (Book.BookHash[it.text] == null) Book(bookFileInfo.name) else Book.BookHash[it.text]!!
 
-                // 书籍相似度少于10%，识别为未找到
-                if (findSimilarity(it.text, bookFileInfo.name) < 0.1) {
+                // 书籍相似度少于40%，识别为未找到
+                if (findSimilarity(it.text, bookFileInfo.name) < 0.4) {
                     println(it.text + "," + bookFileInfo.name)
                     Book.BookHash[it.text] = book
                     break
@@ -104,6 +125,15 @@ class DoubanWeb {
                     } catch (e:Exception) {
                         println("error:${e.message}")
                     }
+
+                } catch (e:NoSuchElementException) {
+                    println("find douban_score error:${e.message}")
+                }
+
+                // 寻找网页中的书籍关键字信息（标题、作者、出版社、日期）
+                try {
+                    val keywords = driver.findElement(By.name("keywords")).getAttribute("content")
+                    splitKeywords(keywords, book)
 
                 } catch (e:NoSuchElementException) {
                     println("error:${e.message}")

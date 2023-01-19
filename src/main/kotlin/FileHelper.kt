@@ -6,7 +6,7 @@ class FileHelper {
         val fileNames: MutableList<BookFileInfo> = mutableListOf()
         val fileTree: FileTreeWalk = File(folderName).walk()
 
-        fileTree.maxDepth(3)
+        fileTree.maxDepth(Config.folderScanDepth)
             .filter { it.isFile }
             .filter { it.extension in listOf("mobi", "epub", "pdf", "azw3", "txt") }
             .forEach { fileNames.add(BookFileInfo(it.name, it.path)) }

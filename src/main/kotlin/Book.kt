@@ -8,6 +8,9 @@ class Book(name: String) {
     var douban_url = ""
     var douban_name = ""
     var douban_score = ""
+    var douban_publisher = ""
+    var douban_author = ""
+    var douban_date = ""
     var douban_category = "未分类"
     var bookPath = mutableListOf<String>()
 
@@ -30,7 +33,7 @@ class Book(name: String) {
 
             reName = reName.split(".")[0].split("_")[0]
 
-            reName = reName.split("（")[0].split("【")[0].split("(")[0]
+            reName = reName.split("【")[0]
 
             return reName
         }
@@ -46,15 +49,34 @@ class Book(name: String) {
         }
     }
 
-    fun save() {
+    fun makeSaveFileName():String {
+        var saveName = ""
+        if (douban_name != "") saveName = "[$douban_score]$douban_name"
+        else saveName = "[$douban_score]$name"
 
-        douban_name = douban_name.replace(" ","").replace(":","：").replace("(","（").replace(")","）").replace("?","？")
-        name = name.replace(" ","").replace(":","：").replace("(","（").replace(")","）").replace("?","？")
+        if (douban_date != "") saveName += "_$douban_date"
+
+        return saveName
+    }
+
+    fun makeSaveFolderName():String {
+
+        return makeSaveFileName().replace(" ",".")
+    }
+
+    fun save() {
+        douban_name = douban_name.replace(":","：").replace("(","（").replace(")","）").replace("?","？").replace("\\",".").replace("/"," ")
+        name = name.replace(":","：").replace("(","（").replace(")","）").replace("?","？").replace("\\",".").replace("/"," ")
 
         if (douban_url == "") {
             for (i in bookPath.indices) {
+
+                if (!Files.isDirectory(Path(Config.unDoubanPath))) {
+                    Files.createDirectory(Path(Config.unDoubanPath))
+                }
+
                 val it = bookPath[i]
-                val bookPath = "${Config.unDoubanPath}【$douban_score】$name\\"
+                val bookPath = "${Config.unDoubanPath}${makeSaveFolderName()}\\"
 
                 if (!Files.isDirectory(Path(bookPath))) {
                     Files.createDirectory(Path(bookPath))
@@ -66,9 +88,14 @@ class Book(name: String) {
             }
 
         } else if (douban_score == "") {
+
+            if (!Files.isDirectory(Path(Config.unScorePath))) {
+                Files.createDirectory(Path(Config.unScorePath))
+            }
+
             for (i in bookPath.indices) {
                 val it = bookPath[i]
-                val bookPath = "${Config.unScorePath}【$douban_score】$name\\"
+                val bookPath = "${Config.unScorePath}${makeSaveFolderName()}\\"
 
                 if (!Files.isDirectory(Path(bookPath))) {
                     Files.createDirectory(Path(bookPath))
@@ -78,7 +105,7 @@ class Book(name: String) {
 //                println(dst)
                 Files.move(Path(it), Path(dst), StandardCopyOption.REPLACE_EXISTING)
             }
-        } else {
+        } else if (Config.ifCategory) {
             val targetPath = Config.targetPath + "$douban_category\\"
 
             if (!Files.isDirectory(Path(targetPath))) {
@@ -89,7 +116,7 @@ class Book(name: String) {
 
                 val it = bookPath[i]
 
-                val bookPath = "$targetPath【$douban_score】$douban_name\\"
+                val bookPath = "$targetPath${makeSaveFolderName()}\\"
 
                 if (!Files.isDirectory(Path(bookPath))) {
                     Files.createDirectory(Path(bookPath))
@@ -97,9 +124,28 @@ class Book(name: String) {
 
                 val extension = Path(it).extension
 
-                val dst = "${bookPath}[$douban_score]$douban_name" + "_"  + "$i.$extension"
+                val dst = "${bookPath}${makeSaveFileName()}" + "_"  + "$i.$extension"
 
 //                println(dst)
+                Files.move(Path(it), Path(dst), StandardCopyOption.REPLACE_EXISTING)
+            }
+        } else {
+            val targetPath = Config.targetPath
+
+            for (i in bookPath.indices) {
+
+                val it = bookPath[i]
+
+                val bookPath = "$targetPath${makeSaveFolderName()}\\"
+
+                if (!Files.isDirectory(Path(bookPath))) {
+                    Files.createDirectory(Path(bookPath))
+                }
+
+                val extension = Path(it).extension
+
+                val dst = "${bookPath}${makeSaveFileName()}" + "_" + "$i.$extension"
+
                 Files.move(Path(it), Path(dst), StandardCopyOption.REPLACE_EXISTING)
             }
         }
@@ -107,10 +153,8 @@ class Book(name: String) {
     }
 
     override fun toString():String {
-        return "name:$douban_name, category:$douban_category, score:$douban_score"
+        return "filename:$name, name:$douban_name, category:$douban_category, score:$douban_score, publisher:$douban_publisher, author:$douban_author, date:$douban_date"
     }
-
-
 
 
 }

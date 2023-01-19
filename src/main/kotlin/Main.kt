@@ -23,8 +23,13 @@ fun main() {
     driver.quit()
 
     for (book in Book.BookHash.values){
-        book.save()
-        println(book.toString())
+        try {
+            book.save()
+            println(book.toString())
+        } catch (e:Exception) {
+            println("Catch Exception ${book.toString()}")
+        }
+
     }
 
 }
